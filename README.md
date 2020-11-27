@@ -5,8 +5,11 @@ This library can be used to expand the dropdown menu with additional options.
 # API
 
 `DDE.Option.Separator`
+
 `DDE.Option.Space`
+
 `DDE:RegisterEvent(events, func[, levels[, data]])`
+
 `DDE:UnregisterEvent(events, func[, levels])`
 
 ## option (separator and space)
@@ -18,7 +21,9 @@ Default entries that behave like a separator line or a space in the dropdown, yo
 You can provide one or a mix of events that will call your callback function when a dropdown menu event occurs:
 
 `"OnShow"`
+
 `"OnHide"`
+
 `"OnShow OnHide"`
 
 ## func (arguments)
@@ -26,9 +31,13 @@ You can provide one or a mix of events that will call your callback function whe
 The callback function has the following arguments passed to it when called from the library:
 
 `dropdown` - the game dropdown frame triggering the callback function
-`event` - the event `OnShow`|`OnHide` that is triggering the callback
+
+`event` - the event `OnShow` or `OnHide` that is triggering the callback
+
 `options` - a table you need to populate with options that you wish to add to the dropdown
+
 `level` - the level of the dropdown
+
 `data` - your previously passed object from registering this callback function
 
 ## levels (optional)
