@@ -1,0 +1,4 @@
+package-as: LibDropDownExtension
+enable-nolib-creation: no
+ignore:
+  - .travis.yml
