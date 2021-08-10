@@ -82,6 +82,8 @@ local function OnEvent(dropdown, event, options)
 		for i = 1, #dropdownOptions do
 			options[i] = dropdownOptions[i]
 		end
+		-- we have added options to the dropdown menu
+		return true
 	elseif event == "OnHide" then
 		-- when hiding we can remove our dropdown options from the options table
 		for i = #options, 1, -1 do
