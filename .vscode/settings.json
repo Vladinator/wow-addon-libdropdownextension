@@ -1,7 +1,22 @@
 {
-    "Lua.diagnostics.disable": [
-        "undefined-global",
-        "undefined-field",
-        "unbalanced-assignments"
+    "Lua.diagnostics.globals": [
+        "CloseDropDownMenus",
+        "CloseMenus",
+        "DropDownList1",
+        "DropDownList2",
+        "DropDownList3",
+        "GameFontDisableSmallLeft",
+        "GameFontHighlightSmallLeft",
+        "GameFontNormalSmallLeft",
+        "GameTooltip",
+        "GameTooltip_AddColoredLine",
+        "GameTooltip_AddInstructionLine",
+        "GameTooltip_AddNormalLine",
+        "GameTooltip_SetTitle",
+        "HIGHLIGHT_FONT_COLOR",
+        "NORMAL_FONT_COLOR",
+        "RED_FONT_COLOR",
+        "UIDROPDOWNMENU_MAXBUTTONS",
+        "UIDropDownMenuButton_OpenColorPicker"
     ]
 }

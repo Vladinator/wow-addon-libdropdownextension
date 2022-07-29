@@ -12,6 +12,7 @@ if not Lib then return end
 ---@field public tSizeX number
 ---@field public tSizeY number
 ---@field public tFitDropDownSizeX boolean
+---@field public disablecolor? string
 
 -- copy pasta more or less from UIDropDownMenu.lua about UIDropDownMenu_CreateInfo()
 ---@class CustomDropDownOption : CustomDropDownOptionIconInfo
@@ -85,6 +86,14 @@ local callbacks = {}
 ---@field public uncheck table
 ---@field public colorSwatch table
 ---@field public colorSwatchNormalTexture table
+---@field public mouseOverIcon? string
+---@field public tooltipOnButton? boolean
+---@field public tooltipTitle? string
+---@field public tooltipWhileDisabled? boolean
+---@field public tooltipInstruction? string
+---@field public tooltipText? string
+---@field public tooltipWarning? string
+---@field public colorSwatchBg? Texture
 
 ---@class CustomDropDown : Frame
 ---@field public options table<number, CustomDropDownOption>
@@ -125,6 +134,7 @@ local function CustomDropDownButton_OnClick(self)
         PlaySound(SOUNDKIT.U_CHAT_SCROLL_BUTTON)
     end
     if not option.keepShownOnClick then
+        ---@diagnostic disable-next-line: undefined-field
         cdropdown:GetParent():Hide() -- CloseDropDownMenus()
     end
 end
@@ -352,7 +362,9 @@ local function ClearDropDown(cdropdown)
     table.wipe(cdropdown.options)
 end
 
+---@param cdropdown CustomDropDown
 ---@param options CustomDropDownOption[]
+---@param orderOffset number
 local function AppendDropDown(cdropdown, options, orderOffset)
     ---@type table<CustomDropDownButton, boolean>
     local available = {}
@@ -705,10 +717,20 @@ local function DropDown_OnHide(self)
     Broadcast("OnHide", self)
 end
 
-DropDownList1:HookScript("OnShow", DropDown_OnShow)
-DropDownList1:HookScript("OnHide", DropDown_OnHide)
-DropDownList2:HookScript("OnShow", DropDown_OnShow)
-DropDownList2:HookScript("OnHide", DropDown_OnHide)
+if DropDownList1 then
+    DropDownList1:HookScript("OnShow", DropDown_OnShow)
+    DropDownList1:HookScript("OnHide", DropDown_OnHide)
+end
+
+if DropDownList2 then
+    DropDownList2:HookScript("OnShow", DropDown_OnShow)
+    DropDownList2:HookScript("OnHide", DropDown_OnHide)
+end
+
+if DropDownList3 then
+    DropDownList3:HookScript("OnShow", DropDown_OnShow)
+    DropDownList3:HookScript("OnHide", DropDown_OnHide)
+end
 
 ---@class LibDropDownExtension
 ---@field public Option table<string, CustomDropDownOption> @`LibDropDownExtension.Option.Separator` `LibDropDownExtension.Option.Space`
