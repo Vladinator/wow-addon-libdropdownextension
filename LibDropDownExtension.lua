@@ -73,7 +73,7 @@ if not Lib then return end
 ---@type CustomDropDownCallback[]
 local callbacks = {}
 
----@class CustomDropDownButton
+---@class CustomDropDownButton : Button
 ---@field public option CustomDropDownOption
 ---@field public order number
 ---@field public invisibleButton table
@@ -86,7 +86,7 @@ local callbacks = {}
 ---@field public colorSwatch table
 ---@field public colorSwatchNormalTexture table
 
----@class CustomDropDown
+---@class CustomDropDown : Frame
 ---@field public options table<number, CustomDropDownOption>
 ---@field public buttons table<number, CustomDropDownButton>
 
@@ -135,6 +135,7 @@ local function CustomDropDownButton_OnEnter(self)
     if not option then
         return
     end
+    ---@diagnostic disable-next-line: assign-type-mismatch
     local cdropdown = self:GetParent() ---@type CustomDropDown
     if option.hasArrow then
         -- open next dropdown level and we don't support that
@@ -200,6 +201,7 @@ end
 
 local function CustomDropDownButton_InvisibleButton_OnEnter(self)
     local button = self:GetParent() ---@type CustomDropDownButton
+    ---@diagnostic disable-next-line: assign-type-mismatch
     local cdropdown = button:GetParent() ---@type CustomDropDown
     CloseDropDownMenus(cdropdown:GetID() + 1)
     if not button.tooltipOnButton or (not button.tooltipTitle and not button.tooltipWhileDisabled) then
@@ -231,6 +233,7 @@ end
 
 local function CustomDropDownButton_ColorSwatch_OnEnter(self)
     local button = self:GetParent() ---@type CustomDropDownButton
+    ---@diagnostic disable-next-line: assign-type-mismatch
     local cdropdown = button:GetParent() ---@type CustomDropDown
     CloseDropDownMenus(cdropdown:GetID() + 1)
     button.colorSwatchBg:SetVertexColor(NORMAL_FONT_COLOR.r, NORMAL_FONT_COLOR.g, NORMAL_FONT_COLOR.b)
@@ -242,9 +245,11 @@ local function CustomDropDownButton_ColorSwatch_OnLeave(self)
 end
 
 ---@param cdropdown CustomDropDown
----@param button CustomDropDownButton
+---@param button? CustomDropDownButton
+---@return CustomDropDownButton button
 local function NewCustomDropDownButton(cdropdown, button)
     local index = #cdropdown.buttons + 1
+    ---@diagnostic disable-next-line: cast-local-type
     button = button or CreateFrame("Button", cdropdown:GetName() .. "Button" .. index, cdropdown, "UIDropDownMenuButtonTemplate")
     button.order = nil
     button.option = nil
@@ -278,6 +283,7 @@ local function NewCustomDropDownButton(cdropdown, button)
     button.colorSwatch:SetScript("OnClick", CustomDropDownButton_ColorSwatch_OnClick)
     button.colorSwatch:SetScript("OnEnter", CustomDropDownButton_ColorSwatch_OnEnter)
     button.colorSwatch:SetScript("OnLeave", CustomDropDownButton_ColorSwatch_OnLeave)
+    ---@diagnostic disable-next-line: return-type-mismatch
     return button
 end
 
@@ -304,7 +310,7 @@ end
 
 local function NewCustomDropDown(dropdown)
     ---@type CustomDropDown
-    local cdropdown = CreateFrame("Button", "LibDropDownExtensionCustomDropDown_" .. tostring(dropdown), dropdown, "UIDropDownListTemplate")
+    local cdropdown = CreateFrame("Button", "LibDropDownExtensionCustomDropDown_" .. tostring(dropdown), dropdown, "UIDropDownListTemplate") ---@diagnostic disable-line: assign-type-mismatch
     cdropdown:SetID(dropdown:GetID())
     cdropdown.options = {}
     cdropdown.buttons = {}
@@ -314,10 +320,10 @@ local function NewCustomDropDown(dropdown)
         Hide(_G[cdropdownName .. "MenuBackdrop"])
         cdropdown:SetFrameStrata(dropdown:GetFrameStrata())
         cdropdown:SetFrameLevel(dropdown:GetFrameLevel() + 1)
-        cdropdown:SetScript("OnClick", nil)
-        cdropdown:SetScript("OnUpdate", nil)
+        cdropdown:SetScript("OnClick", nil) ---@diagnostic disable-line: param-type-mismatch
+        cdropdown:SetScript("OnUpdate", nil) ---@diagnostic disable-line: param-type-mismatch
         cdropdown:SetScript("OnShow", CustomDropDown_OnShow)
-        cdropdown:SetScript("OnHide", nil)
+        cdropdown:SetScript("OnHide", nil) ---@diagnostic disable-line: param-type-mismatch
         for i = 1, UIDROPDOWNMENU_MAXBUTTONS do
             ---@type CustomDropDownButton
             local button = _G[cdropdown:GetName() .. "Button" .. i]
@@ -348,7 +354,7 @@ end
 
 ---@param options CustomDropDownOption[]
 local function AppendDropDown(cdropdown, options, orderOffset)
-    ---@type CustomDropDownButton[]
+    ---@type table<CustomDropDownButton, boolean>
     local available = {}
     for i = 1, #cdropdown.buttons do
         local button = cdropdown.buttons[i]
@@ -600,7 +606,8 @@ local function RefreshButtons(cdropdown)
     end
     local numOptions = #cdropdown.options
     if numOptions > 0 then
-        local parent = cdropdown:GetParent()
+        ---@diagnostic disable-next-line: assign-type-mismatch
+        local parent = cdropdown:GetParent() ---@type Frame
         parent:SetHeight(parent:GetHeight() + 16 * numOptions)
         cdropdown:ClearAllPoints()
         cdropdown:SetPoint("BOTTOMLEFT", parent, "BOTTOMLEFT", 0, 0)
