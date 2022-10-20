@@ -1,7 +1,7 @@
-local MAJOR, MINOR = "LibDropDownExtension-1.0", 1
+local MAJOR, MINOR = "LibDropDownExtension-1.0", 2
 assert(LibStub, MAJOR .. " requires LibStub")
 
-local Lib = LibStub:NewLibrary(MAJOR, MINOR)
+local Lib, LibPrevMinor = LibStub:NewLibrary(MAJOR, MINOR)
 if not Lib then return end
 
 ---@class CustomDropDownOptionIconInfo
@@ -72,7 +72,8 @@ if not Lib then return end
 ---@field public data table
 
 ---@type CustomDropDownCallback[]
-local callbacks = {}
+Lib._callbacks = Lib._callbacks or {}
+local callbacks = Lib._callbacks
 
 ---@class CustomDropDownButton : Button
 ---@field public option CustomDropDownOption
@@ -100,6 +101,7 @@ local callbacks = {}
 ---@field public buttons table<number, CustomDropDownButton>
 
 ---@type CustomDropDown[]
+Lib._cdropdowns = Lib._cdropdowns or {}
 local cdropdowns = {}
 
 ---@param self CustomDropDownButton
@@ -668,7 +670,8 @@ local function RemoveInvalidOptions(options)
     end
 end
 
-local separatorTable
+Lib._separatorTable = Lib._separatorTable or { Lib.Option.Separator }
+local separatorTable = Lib._separatorTable
 
 local function Broadcast(event, dropdown)
     local level = dropdown:GetID()
@@ -683,9 +686,6 @@ local function Broadcast(event, dropdown)
             if status and retval then
                 if not shownSeparator and callback.options[1] then
                     shownSeparator = true
-                    if not separatorTable then
-                        separatorTable = { Lib.Option.Separator }
-                    end
                     AppendDropDown(cdropdown, separatorTable, 0)
                 end
                 if type(retval) == "table" and retval ~= callback.options then
@@ -727,7 +727,7 @@ if DropDownList2 then
     DropDownList2:HookScript("OnHide", DropDown_OnHide)
 end
 
-if DropDownList3 then
+if DropDownList3 and LibPrevMinor < 2 then
     DropDownList3:HookScript("OnShow", DropDown_OnShow)
     DropDownList3:HookScript("OnHide", DropDown_OnHide)
 end
@@ -737,39 +737,40 @@ end
 ---@field public RegisterEvent function @`LibDropDownExtension:RegisterEvent(events, func[, levels[, data]])` where func is later called as `func(dropdown, event, options, level, data)` and the return boolean if true will append the options to the dropdown, otherwise false will ignore appending our options to the dropdown.
 ---@field public UnregisterEvent function @`LibDropDownExtension:UnregisterEvent(events, func[, levels])`
 
-Lib.Option = {
-    Separator = {
-        hasArrow = false,
-        dist = 0,
-        isTitle = true,
-        isUninteractable = true,
-        notCheckable = true,
-        iconOnly = true,
-        icon = "Interface\\Common\\UI-TooltipDivider-Transparent",
+Lib.Option = Lib.Option or {}
+
+Lib.Option.Separator = Lib.Option.Separator or {
+    hasArrow = false,
+    dist = 0,
+    isTitle = true,
+    isUninteractable = true,
+    notCheckable = true,
+    iconOnly = true,
+    icon = "Interface\\Common\\UI-TooltipDivider-Transparent",
+    tCoordLeft = 0,
+    tCoordRight = 1,
+    tCoordTop = 0,
+    tCoordBottom = 1,
+    tSizeX = 0,
+    tSizeY = 8,
+    tFitDropDownSizeX = true,
+    iconInfo = {
         tCoordLeft = 0,
         tCoordRight = 1,
         tCoordTop = 0,
         tCoordBottom = 1,
         tSizeX = 0,
         tSizeY = 8,
-        tFitDropDownSizeX = true,
-        iconInfo = {
-            tCoordLeft = 0,
-            tCoordRight = 1,
-            tCoordTop = 0,
-            tCoordBottom = 1,
-            tSizeX = 0,
-            tSizeY = 8,
-            tFitDropDownSizeX = true
-        }
-    },
-    Space = {
-        hasArrow = false,
-        dist = 0,
-        isTitle = true,
-        isUninteractable = true,
-        notCheckable = true
+        tFitDropDownSizeX = true
     }
+}
+
+Lib.Option.Space = Lib.Option.Space or {
+    hasArrow = false,
+    dist = 0,
+    isTitle = true,
+    isUninteractable = true,
+    notCheckable = true
 }
 
 function Lib:RegisterEvent(events, func, levels, data)
