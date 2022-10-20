@@ -1,8 +1,27 @@
 local MAJOR, MINOR = "LibDropDownExtension-1.0", 2
 assert(LibStub, MAJOR .. " requires LibStub")
 
-local Lib, LibPrevMinor = LibStub:NewLibrary(MAJOR, MINOR)
+---@class DropDownList : Button
+---@field private dropdown CustomDropDown
+---@field public GetID fun(): number
+---@field public maxWidth number
+
+---@class LibDropDownExtension
+---@field private _callbacks CustomDropDownCallback[]
+---@field private _cdropdowns table<DropDownList, CustomDropDown>
+---@field private _separatorTable CustomDropDownOption[]
+---@field public Option table<string, CustomDropDownOption> `LibDropDownExtension.Option.Separator` `LibDropDownExtension.Option.Space`
+---@field public RegisterEvent fun(self: LibDropDownExtension, events: string, func: LibDropDownExtensionCallback, levels?: number|boolean, data?: table): boolean `LibDropDownExtension:RegisterEvent(events, func[, levels[, data]])` where func is later called as `func(dropdown, event, options, level, data)` and the return boolean if true will append the options to the dropdown, otherwise false will ignore appending our options to the dropdown.
+---@field public UnregisterEvent fun(self: LibDropDownExtension, events: string, func: LibDropDownExtensionCallback, levels?: number|boolean): boolean `LibDropDownExtension:UnregisterEvent(events, func[, levels])`
+
+---@alias LibDropDownExtensionEvent "OnShow"|"OnHide"
+
+---@alias LibDropDownExtensionCallback fun(dropdown: CustomDropDown, event: LibDropDownExtensionEvent, options: CustomDropDownOption[], level: number, data: any[]?): CustomDropDownOption[]?
+
+---@type LibDropDownExtension?, number?
+local Lib, LibPrevMinor = LibStub:NewLibrary(MAJOR, MINOR) ---@diagnostic disable-line: assign-type-mismatch
 if not Lib then return end
+LibPrevMinor = LibPrevMinor or 1
 
 ---@class CustomDropDownOptionIconInfo
 ---@field public tCoordLeft number
@@ -18,8 +37,8 @@ if not Lib then return end
 ---@class CustomDropDownOption : CustomDropDownOptionIconInfo
 ---@field public text string @The text of the button
 ---@field public value any @The value that UIDROPDOWNMENU_MENU_VALUE is set to when the button is clicked
----@field public func function @The function that is called when you click the button. Called as `func(button, option.arg1, option.arg2, option.checkedEval)`
----@field public checked boolean|function @Check the button if true or function returns true
+---@field public func fun(button: CustomDropDownButton, arg1: any, arg2: any, checked: boolean) @The function that is called when you click the button. Called as `func(button, option.arg1, option.arg2, option.checkedEval)`
+---@field public checked boolean|fun(self: CustomDropDownOption): boolean? @Check the button if true or function returns true
 ---@field public checkedEval boolean @The final value of the checked state (in case a function and such, use this in your click handler)
 ---@field public isNotRadio boolean @Check the button uses radial image if false check box image if true
 ---@field public isTitle boolean @If it's a title the button is disabled and the font color is set to yellow
@@ -66,43 +85,41 @@ if not Lib then return end
 ---@field public customUncheckIconTexture string|number
 
 ---@class CustomDropDownCallback
----@field public events table<string, number|boolean>
----@field public func function
----@field public options table<number, CustomDropDownOption>
+---@field public events table<LibDropDownExtensionEvent, number|boolean>
+---@field public func LibDropDownExtensionCallback
+---@field public options CustomDropDownOption[]
 ---@field public data table
 
----@type CustomDropDownCallback[]
 Lib._callbacks = Lib._callbacks or {}
 local callbacks = Lib._callbacks
 
 ---@class CustomDropDownButton : Button
 ---@field public option CustomDropDownOption
 ---@field public order number
----@field public invisibleButton table
----@field public highlight table
----@field public normalText table
----@field public iconTexture table
----@field public expandArrow table
----@field public check table
----@field public uncheck table
----@field public colorSwatch table
----@field public colorSwatchNormalTexture table
----@field public mouseOverIcon? string
----@field public tooltipOnButton? boolean
----@field public tooltipTitle? string
----@field public tooltipWhileDisabled? boolean
----@field public tooltipInstruction? string
----@field public tooltipText? string
----@field public tooltipWarning? string
----@field public colorSwatchBg? Texture
+---@field public invisibleButton Button
+---@field public highlight Texture
+---@field public normalText FontString
+---@field public iconTexture Texture
+---@field public expandArrow Button
+---@field public check Texture
+---@field public uncheck Texture
+---@field public colorSwatch Button
+---@field public colorSwatchNormalTexture Texture
+---@field public mouseOverIcon string?
+---@field public tooltipOnButton boolean?
+---@field public tooltipTitle string?
+---@field public tooltipWhileDisabled boolean?
+---@field public tooltipInstruction string?
+---@field public tooltipText string?
+---@field public tooltipWarning string?
+---@field public colorSwatchBg Texture?
 
----@class CustomDropDown : Frame
----@field public options table<number, CustomDropDownOption>
----@field public buttons table<number, CustomDropDownButton>
+---@class CustomDropDown : DropDownList
+---@field public options CustomDropDownOption[]
+---@field public buttons CustomDropDownButton[]
 
----@type CustomDropDown[]
 Lib._cdropdowns = Lib._cdropdowns or {}
-local cdropdowns = {}
+local cdropdowns = Lib._cdropdowns
 
 ---@param self CustomDropDownButton
 local function CustomDropDownButton_OnClick(self)
@@ -111,7 +128,8 @@ local function CustomDropDownButton_OnClick(self)
         return
     end
     local cdropdown = self:GetParent()
-    local checked = option.checked
+    ---@diagnostic disable-next-line: assign-type-mismatch
+    local checked = option.checked ---@type boolean
     if type(checked) == "function" then
         checked = checked(self)
     end
@@ -129,7 +147,7 @@ local function CustomDropDownButton_OnClick(self)
     if type(option.checkedEval) ~= "function" then
         option.checkedEval = checked
     end
-    if option.func then
+    if type(option.func) == "function" then
         option.func(self, option.arg1, option.arg2, checked)
     end
     if not option.noClickSound then
@@ -257,7 +275,7 @@ local function CustomDropDownButton_ColorSwatch_OnLeave(self)
 end
 
 ---@param cdropdown CustomDropDown
----@param button? CustomDropDownButton
+---@param button CustomDropDownButton?
 ---@return CustomDropDownButton button
 local function NewCustomDropDownButton(cdropdown, button)
     local index = #cdropdown.buttons + 1
@@ -281,12 +299,12 @@ local function NewCustomDropDownButton(cdropdown, button)
     button.normalText:ClearAllPoints()
     button.normalText:SetPoint("LEFT")
     button.normalText:SetPoint("RIGHT")
-    button.normalText:SetWordWrap(false)
+    button.normalText:SetWordWrap(false) ---@diagnostic disable-line: redundant-parameter
     button.normalText:SetNonSpaceWrap(false)
     button.iconTexture = _G[buttonName .. "Icon"]
     button.expandArrow = _G[buttonName .. "ExpandArrow"]
-    button.expandArrow:SetScript("OnMouseDown", nil)
-    button.expandArrow:SetScript("OnEnter", nil)
+    button.expandArrow:SetScript("OnMouseDown", nil) ---@diagnostic disable-line: param-type-mismatch
+    button.expandArrow:SetScript("OnEnter", nil) ---@diagnostic disable-line: param-type-mismatch
     button.check = _G[buttonName .. "Check"]
     button.uncheck = _G[buttonName .. "UnCheck"]
     button.colorSwatch = _G[buttonName .. "ColorSwatch"]
@@ -301,7 +319,8 @@ end
 
 ---@param cdropdown CustomDropDown
 local function CustomDropDown_OnShow(cdropdown)
-    local parent = cdropdown:GetParent()
+    ---@type DropDownList
+    local parent = cdropdown:GetParent() ---@diagnostic disable-line: assign-type-mismatch
     local maxWidth = parent.maxWidth
     local width, height = parent:GetWidth(), 32
     for i = 1, #cdropdown.buttons do
@@ -314,12 +333,14 @@ local function CustomDropDown_OnShow(cdropdown)
     cdropdown:SetHeight(height)
 end
 
+---@param widget Region
 local function Hide(widget)
     widget:SetAlpha(0)
     widget:Hide()
     widget.Show = widget.Hide
 end
 
+---@param dropdown DropDownList
 local function NewCustomDropDown(dropdown)
     ---@type CustomDropDown
     local cdropdown = CreateFrame("Button", "LibDropDownExtensionCustomDropDown_" .. tostring(dropdown), dropdown, "UIDropDownListTemplate") ---@diagnostic disable-line: assign-type-mismatch
@@ -368,7 +389,7 @@ end
 ---@param options CustomDropDownOption[]
 ---@param orderOffset number
 local function AppendDropDown(cdropdown, options, orderOffset)
-    ---@type table<CustomDropDownButton, boolean>
+    ---@type table<CustomDropDownButton, boolean?>
     local available = {}
     for i = 1, #cdropdown.buttons do
         local button = cdropdown.buttons[i]
@@ -490,7 +511,7 @@ local function RefreshButton(button)
 
     --[=[
     local xPos = 5
-    local displayInfo = button.normalText
+    local displayInfo = button.normalText ---@type FontString|Texture
     if option.iconOnly then
         displayInfo = icon
     end
@@ -563,7 +584,8 @@ local function RefreshButton(button)
             uncheck:SetTexture("Interface\\Common\\UI-DropDownRadioChecks")
         end
 
-        local checked = option.checked
+        ---@diagnostic disable-next-line: assign-type-mismatch
+        local checked = option.checked ---@type boolean
         if type(checked) == "function" then
             checked = checked(button)
         end
@@ -594,7 +616,7 @@ end
 
 ---@param cdropdown CustomDropDown
 local function RefreshButtons(cdropdown)
-    local lastButton
+    local lastButton ---@type CustomDropDownButton?
     for i = 1, #cdropdown.buttons do
         local button = cdropdown.buttons[i]
         if not button.option then
@@ -632,6 +654,7 @@ local function RefreshButtons(cdropdown)
     end
 end
 
+---@param dropdown DropDownList
 local function GetCustomDropDown(dropdown)
     local cdropdown = cdropdowns[dropdown]
     if not cdropdown then
@@ -673,6 +696,8 @@ end
 Lib._separatorTable = Lib._separatorTable or { Lib.Option.Separator }
 local separatorTable = Lib._separatorTable
 
+---@param event LibDropDownExtensionEvent
+---@param dropdown DropDownList
 local function Broadcast(event, dropdown)
     local level = dropdown:GetID()
     local cdropdown = GetCustomDropDown(dropdown)
@@ -700,6 +725,8 @@ local function Broadcast(event, dropdown)
     RefreshButtons(cdropdown)
 end
 
+---@param func LibDropDownExtensionCallback
+---@return CustomDropDownCallback?, number?
 local function GetCallbackForFunc(func)
     for i = 1, #callbacks do
         local callback = callbacks[i]
@@ -709,10 +736,12 @@ local function GetCallbackForFunc(func)
     end
 end
 
+---@param self DropDownList
 local function DropDown_OnShow(self)
     Broadcast("OnShow", self)
 end
 
+---@param self DropDownList
 local function DropDown_OnHide(self)
     Broadcast("OnHide", self)
 end
@@ -731,11 +760,6 @@ if DropDownList3 and LibPrevMinor < 2 then
     DropDownList3:HookScript("OnShow", DropDown_OnShow)
     DropDownList3:HookScript("OnHide", DropDown_OnHide)
 end
-
----@class LibDropDownExtension
----@field public Option table<string, CustomDropDownOption> @`LibDropDownExtension.Option.Separator` `LibDropDownExtension.Option.Space`
----@field public RegisterEvent function @`LibDropDownExtension:RegisterEvent(events, func[, levels[, data]])` where func is later called as `func(dropdown, event, options, level, data)` and the return boolean if true will append the options to the dropdown, otherwise false will ignore appending our options to the dropdown.
----@field public UnregisterEvent function @`LibDropDownExtension:UnregisterEvent(events, func[, levels])`
 
 Lib.Option = Lib.Option or {}
 
@@ -773,12 +797,17 @@ Lib.Option.Space = Lib.Option.Space or {
     notCheckable = true
 }
 
+---@param events string
+---@param func LibDropDownExtensionCallback
+---@param levels (number|boolean)?
+---@param data table?
+---@return boolean success
 function Lib:RegisterEvent(events, func, levels, data)
-    assert(type(events) == "string" and type(func) == "function", "LibDropDownExtension:RegisterEvent(events, func[, levels]) requires events to be a string and func a function. levels is an optional number 1, 2 or nil for any level.")
+    assert(type(events) == "string" and type(func) == "function", "LibDropDownExtension:RegisterEvent(events, func[, levels][, data]) requires events to be a string and func a function. levels is an optional number 1, 2 or nil for any level.")
     local callback = GetCallbackForFunc(func)
     for _, event in ipairs({strsplit(" ", events)}) do
         if not callback then
-            callback = {}
+            callback = {} ---@type CustomDropDownCallback
             callback.events = {}
             callback.func = func
             callback.options = {}
@@ -790,6 +819,10 @@ function Lib:RegisterEvent(events, func, levels, data)
     return callback ~= nil
 end
 
+---@param events string
+---@param func LibDropDownExtensionCallback
+---@param levels (number|boolean)?
+---@return boolean success
 function Lib:UnregisterEvent(events, func, levels)
     assert(type(events) == "string" and type(func) == "function", "LibDropDownExtension:UnregisterEvent(events, func) requires events to be a string and func a function.")
     local callback, index = GetCallbackForFunc(func)
