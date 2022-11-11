@@ -11,6 +11,7 @@ assert(LibStub, MAJOR .. " requires LibStub")
 ---@field public _cdropdowns table<DropDownList, CustomDropDown>
 ---@field public _separatorTable CustomDropDownOption[]
 ---@field public Option table<string, CustomDropDownOption> `LibDropDownExtension.Option.Separator` `LibDropDownExtension.Option.Space`
+---@field public Broadcast fun(self: LibDropDownExtension, event: LibDropDownExtensionEvent, dropdown: DropDownList): nil LibDropDownExtension:Broadcast(event, dropdown)` Execute registered callbacks for `event` and copy results from `dropdown`.
 ---@field public RegisterEvent fun(self: LibDropDownExtension, events: string, func: LibDropDownExtensionCallback, levels?: number|boolean, data?: table): boolean `LibDropDownExtension:RegisterEvent(events, func[, levels[, data]])` where func is later called as `func(dropdown, event, options, level, data)` and the return boolean if true will append the options to the dropdown, otherwise false will ignore appending our options to the dropdown.
 ---@field public UnregisterEvent fun(self: LibDropDownExtension, events: string, func: LibDropDownExtensionCallback, levels?: number|boolean): boolean `LibDropDownExtension:UnregisterEvent(events, func[, levels])`
 
@@ -21,7 +22,6 @@ assert(LibStub, MAJOR .. " requires LibStub")
 ---@type LibDropDownExtension?, number?
 local Lib, LibPrevMinor = LibStub:NewLibrary(MAJOR, MINOR) ---@diagnostic disable-line: assign-type-mismatch
 if not Lib then return end
-LibPrevMinor = LibPrevMinor or 1
 
 ---@class CustomDropDownOptionIconInfo
 ---@field public tCoordLeft number
@@ -341,6 +341,7 @@ local function Hide(widget)
 end
 
 ---@param dropdown DropDownList
+---@return CustomDropDown
 local function NewCustomDropDown(dropdown)
     ---@type CustomDropDown
     local cdropdown = CreateFrame("Button", "LibDropDownExtensionCustomDropDown_" .. tostring(dropdown), dropdown, "UIDropDownListTemplate") ---@diagnostic disable-line: assign-type-mismatch
@@ -531,15 +532,15 @@ local function RefreshButton(button)
     end
 
     local frame = UIDROPDOWNMENU_OPEN_MENU
-	if frame and frame.displayMode == "MENU" then
-		if not option.notCheckable then
-			xPos = xPos - 6
-		end
+    if frame and frame.displayMode == "MENU" then
+        if not option.notCheckable then
+          xPos = xPos - 6
+        end
     end
 
     frame = frame or UIDROPDOWNMENU_INIT_MENU
     if option.leftPadding then
-		xPos = xPos + option.leftPadding
+        xPos = xPos + option.leftPadding
     end
 
     displayInfo:SetPoint("TOPLEFT", button, "TOPLEFT", xPos, 0)
@@ -695,7 +696,7 @@ end
 
 ---@param event LibDropDownExtensionEvent
 ---@param dropdown DropDownList
-local function Broadcast(event, dropdown)
+function Lib:Broadcast(event, dropdown)
     local level = dropdown:GetID()
     local cdropdown = GetCustomDropDown(dropdown)
     local shownSeparator
@@ -735,27 +736,30 @@ end
 
 ---@param self DropDownList
 local function DropDown_OnShow(self)
-    Broadcast("OnShow", self)
+    Lib:Broadcast("OnShow", self)
 end
 
 ---@param self DropDownList
 local function DropDown_OnHide(self)
-    Broadcast("OnHide", self)
+    Lib:Broadcast("OnHide", self)
 end
 
-if DropDownList1 then
-    DropDownList1:HookScript("OnShow", DropDown_OnShow)
-    DropDownList1:HookScript("OnHide", DropDown_OnHide)
-end
+-- Only need to hook once
+if not LibPrevMinor then
+    if DropDownList1 then
+        DropDownList1:HookScript("OnShow", DropDown_OnShow)
+        DropDownList1:HookScript("OnHide", DropDown_OnHide)
+    end
 
-if DropDownList2 then
-    DropDownList2:HookScript("OnShow", DropDown_OnShow)
-    DropDownList2:HookScript("OnHide", DropDown_OnHide)
-end
+    if DropDownList2 then
+        DropDownList2:HookScript("OnShow", DropDown_OnShow)
+        DropDownList2:HookScript("OnHide", DropDown_OnHide)
+    end
 
-if DropDownList3 and LibPrevMinor < 2 then
-    DropDownList3:HookScript("OnShow", DropDown_OnShow)
-    DropDownList3:HookScript("OnHide", DropDown_OnHide)
+    if DropDownList3 then
+        DropDownList3:HookScript("OnShow", DropDown_OnShow)
+        DropDownList3:HookScript("OnHide", DropDown_OnHide)
+    end
 end
 
 Lib.Option = Lib.Option or {}
