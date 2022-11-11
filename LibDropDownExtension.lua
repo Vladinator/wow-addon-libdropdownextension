@@ -1,4 +1,4 @@
-local MAJOR, MINOR = "LibDropDownExtension-1.0", 2
+local MAJOR, MINOR = "LibDropDownExtension-1.0", 3
 assert(LibStub, MAJOR .. " requires LibStub")
 
 ---@class DropDownList : Button
@@ -10,6 +10,8 @@ assert(LibStub, MAJOR .. " requires LibStub")
 ---@field public _callbacks CustomDropDownCallback[]
 ---@field public _cdropdowns table<DropDownList, CustomDropDown>
 ---@field public _separatorTable CustomDropDownOption[]
+---@field public _hooked table<DropDownList, boolean>
+---@field public _Broadcast fun(self: LibDropDownExtension, event: LibDropDownExtensionEvent, dropdown: DropDownList)
 ---@field public Option table<string, CustomDropDownOption> `LibDropDownExtension.Option.Separator` `LibDropDownExtension.Option.Space`
 ---@field public RegisterEvent fun(self: LibDropDownExtension, events: string, func: LibDropDownExtensionCallback, levels?: number|boolean, data?: table): boolean `LibDropDownExtension:RegisterEvent(events, func[, levels[, data]])` where func is later called as `func(dropdown, event, options, level, data)` and the return boolean if true will append the options to the dropdown, otherwise false will ignore appending our options to the dropdown.
 ---@field public UnregisterEvent fun(self: LibDropDownExtension, events: string, func: LibDropDownExtensionCallback, levels?: number|boolean): boolean `LibDropDownExtension:UnregisterEvent(events, func[, levels])`
@@ -21,7 +23,6 @@ assert(LibStub, MAJOR .. " requires LibStub")
 ---@type LibDropDownExtension?, number?
 local Lib, LibPrevMinor = LibStub:NewLibrary(MAJOR, MINOR) ---@diagnostic disable-line: assign-type-mismatch
 if not Lib then return end
-LibPrevMinor = LibPrevMinor or 1
 
 ---@class CustomDropDownOptionIconInfo
 ---@field public tCoordLeft number
@@ -695,7 +696,7 @@ end
 
 ---@param event LibDropDownExtensionEvent
 ---@param dropdown DropDownList
-local function Broadcast(event, dropdown)
+function Lib:_Broadcast(event, dropdown)
     local level = dropdown:GetID()
     local cdropdown = GetCustomDropDown(dropdown)
     local shownSeparator
@@ -735,27 +736,23 @@ end
 
 ---@param self DropDownList
 local function DropDown_OnShow(self)
-    Broadcast("OnShow", self)
+    Lib:_Broadcast("OnShow", self)
 end
 
 ---@param self DropDownList
 local function DropDown_OnHide(self)
-    Broadcast("OnHide", self)
+    Lib:_Broadcast("OnHide", self)
 end
 
-if DropDownList1 then
-    DropDownList1:HookScript("OnShow", DropDown_OnShow)
-    DropDownList1:HookScript("OnHide", DropDown_OnHide)
-end
+Lib._hooked = Lib._hooked or {}
 
-if DropDownList2 then
-    DropDownList2:HookScript("OnShow", DropDown_OnShow)
-    DropDownList2:HookScript("OnHide", DropDown_OnHide)
-end
-
-if DropDownList3 and LibPrevMinor < 2 then
-    DropDownList3:HookScript("OnShow", DropDown_OnShow)
-    DropDownList3:HookScript("OnHide", DropDown_OnHide)
+for i = 1, 3 do
+    local dropDownList = _G[format("DropDownList%d", i)] ---@type DropDownList?
+    if dropDownList and not Lib._hooked[dropDownList] then
+        Lib._hooked[dropDownList] = true
+        dropDownList:HookScript("OnShow", DropDown_OnShow)
+        dropDownList:HookScript("OnHide", DropDown_OnHide)
+    end
 end
 
 Lib.Option = Lib.Option or {}
