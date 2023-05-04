@@ -84,6 +84,7 @@ if not Lib then return end
 ---@field public customCheckIconTexture string|number
 ---@field public customUncheckIconAtlas string
 ---@field public customUncheckIconTexture string|number
+---@field public show? fun()
 
 ---@class CustomDropDownCallback
 ---@field public events table<LibDropDownExtensionEvent, number|boolean>
