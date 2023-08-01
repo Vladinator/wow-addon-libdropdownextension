@@ -804,11 +804,13 @@ function Lib:RegisterEvent(events, func, levels, data)
     local callback = GetCallbackForFunc(func)
     for _, event in ipairs({strsplit(" ", events)}) do
         if not callback then
-            callback = {} ---@type CustomDropDownCallback
-            callback.events = {}
-            callback.func = func
-            callback.options = {}
-            callback.data = type(data) == "table" and data or {}
+            ---@type CustomDropDownCallback
+            callback = {
+                events = {},
+                func = func,
+                options = {},
+                data = type(data) == "table" and data or {},
+            }
             callbacks[#callbacks + 1] = callback
         end
         callback.events[event] = levels or true
