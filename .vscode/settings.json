@@ -1,6 +1,5 @@
 {
     "Lua.diagnostics.globals": [
-        "CloseDropDownMenus",
         "CloseMenus",
         "DropDownList1",
         "DropDownList2",
@@ -17,6 +16,7 @@
         "NORMAL_FONT_COLOR",
         "RED_FONT_COLOR",
         "UIDROPDOWNMENU_MAXBUTTONS",
+        "UIDROPDOWNMENU_MENU_VALUE",
         "UIDropDownMenuButton_OpenColorPicker"
     ]
 }
