@@ -239,7 +239,7 @@ if not cdropdownLists[1] then
     cdropdownList:SetToplevel(true)
     cdropdownList:SetFrameStrata("FULLSCREEN_DIALOG")
     cdropdownList:SetClampedToScreen(true)
-    cdropdownList:SetSize(180, 10)
+    cdropdownList:SetSize(180, 20)
     cdropdownList:Hide()
     cdropdownList:SetScript("OnUpdate", nil)
     cdropdownList:SetScript("OnShow", nil)
@@ -248,16 +248,16 @@ if not cdropdownLists[1] then
 end
 
 ---@param cdropdown LibDropDownExtensionCustomDropDown
+---@return LibDropDownExtensionDropDownList? dropDownList
 local function IsCustomDropDownList(cdropdown)
     for _, list in ipairs(cdropdownLists)  do
         if list == cdropdown then
-            return true
+            return list
         end
     end
-    return false
 end
 
----@param target (DropDownListPolyfill|number)?
+---@param target (LibDropDownExtensionCustomDropDown|DropDownListPolyfill|number)?
 local function SafelyCloseDropDownMenus(target)
     local level = true ---@type boolean|number
     if type(target) == "number" then
@@ -296,7 +296,7 @@ local function CustomDropDownButton_OnClick(self)
         return
     end
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local cdropdown = self:GetParent() ---@type LibDropDownExtensionCustomDropDown
+    local cdropdown = self:GetParent() ---@type LibDropDownExtensionCustomDropDown|LibDropDownExtensionDropDownList
     local checked = CustomDropDownButtonIsChecked(self)
     if option.keepShownOnClick and not option.notCheckable then
         if checked then
@@ -318,11 +318,17 @@ local function CustomDropDownButton_OnClick(self)
     if not option.noClickSound then
         PlaySound(SOUNDKIT.U_CHAT_SCROLL_BUTTON)
     end
-    if not option.keepShownOnClick then
-        ---@type DropDownListPolyfill
-        local parent = cdropdown:GetParent() ---@diagnostic disable-line: assign-type-mismatch
-        SafelyCloseDropDownMenus(parent)
+    if option.keepShownOnClick then
+        return
     end
+    local dropDownList = IsCustomDropDownList(cdropdown)
+    if dropDownList then
+        SafelyCloseDropDownMenus(dropDownList.parent)
+        return
+    end
+    ---@type DropDownListPolyfill
+    local parent = cdropdown:GetParent() ---@diagnostic disable-line: assign-type-mismatch
+    SafelyCloseDropDownMenus(parent)
 end
 
 ---@param self LibDropDownExtensionCustomDropDownButton
@@ -332,7 +338,7 @@ local function CustomDropDownButton_OnEnter(self)
         return
     end
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local cdropdown = self:GetParent() ---@type LibDropDownExtensionCustomDropDown
+    local cdropdown = self:GetParent() ---@type LibDropDownExtensionCustomDropDown|LibDropDownExtensionDropDownList
     if option.hasArrow then
         local level = cdropdown:GetID() + 1
         local listFrame = _G[format("DropDownList%d", level)]
@@ -380,12 +386,13 @@ local function CustomDropDownButton_OnLeave(self)
     self.highlight:Hide()
     GameTooltip:Hide()
     local option = self.option
-    if option.mouseOverIcon then
-        if option.icon then
-            self.iconTexture:SetTexture(option.icon)
-        else
-            self.iconTexture:Hide()
-        end
+    if not option.mouseOverIcon then
+        return
+    end
+    if option.icon then
+        self.iconTexture:SetTexture(option.icon)
+    else
+        self.iconTexture:Hide()
     end
 end
 
@@ -470,14 +477,21 @@ local function CustomDropDownButton_ColorSwatch_OnLeave(self)
     button.colorSwatchBg:SetVertexColor(HIGHLIGHT_FONT_COLOR.r, HIGHLIGHT_FONT_COLOR.g, HIGHLIGHT_FONT_COLOR.b)
 end
 
+---@param buttonID "LeftButton"|"RightButton"|"MiddleButton"|"Button4"|"Button5"
+---@param event WowEvent
+local function CustomDropDownHandlesGlobalMouseEvent(_, buttonID, event)
+    return event == "GLOBAL_MOUSE_DOWN" and buttonID == "LeftButton"
+end
+
 ---@param cdropdown LibDropDownExtensionCustomDropDown|DropDownListPolyfill
 ---@param existingButton LibDropDownExtensionCustomDropDownButton?
 ---@return LibDropDownExtensionCustomDropDownButton button
 local function NewCustomDropDownButton(cdropdown, existingButton)
     local index = #cdropdown.buttons + 1
-    local button = existingButton or CreateFrame("Button", cdropdown:GetName() .. "Button" .. index, cdropdown, "UIDropDownMenuButtonTemplate") ---@class LibDropDownExtensionCustomDropDownButton
+    local button = existingButton or CreateFrame("Button", format("%s%s%d", cdropdown:GetName(), "CustomButton", index), cdropdown, "UIDropDownMenuButtonTemplate") ---@class LibDropDownExtensionCustomDropDownButton
     button.order = nil
     button.option = nil
+    button.HandlesGlobalMouseEvent = CustomDropDownHandlesGlobalMouseEvent
     button:SetID(index)
     button:SetFrameLevel(cdropdown:GetFrameLevel() + 2)
     button:SetScript("OnClick", CustomDropDownButton_OnClick)
@@ -546,6 +560,7 @@ end
 ---@param dropdown DropDownListPolyfill
 local function NewCustomDropDown(dropdown)
     local cdropdown = CreateFrame("Button", "LibDropDownExtensionCustomDropDown_" .. tostring(dropdown), dropdown, "UIDropDownListTemplate") ---@class LibDropDownExtensionCustomDropDown
+    cdropdown.HandlesGlobalMouseEvent = CustomDropDownHandlesGlobalMouseEvent
     cdropdown:SetID(dropdown:GetID())
     cdropdown.options = {}
     cdropdown.buttons = {}
@@ -734,15 +749,15 @@ local function RefreshButton(button)
     end
 
     local frame = UIDROPDOWNMENU_OPEN_MENU
-	if frame and frame.displayMode == "MENU" then
-		if not option.notCheckable then
-			xPos = xPos - 6
-		end
+    if frame and frame.displayMode == "MENU" then
+        if not option.notCheckable then
+            xPos = xPos - 6
+        end
     end
 
     frame = frame or UIDROPDOWNMENU_INIT_MENU
     if option.leftPadding then
-		xPos = xPos + option.leftPadding
+        xPos = xPos + option.leftPadding
     end
 
     displayInfo:SetPoint("TOPLEFT", button, "TOPLEFT", xPos, 0)
@@ -907,7 +922,7 @@ function CustomDropDownToggleMenu(self, level)
     cdropdownList.numButtons = numButtons
     cdropdownList:Hide()
     ---@diagnostic disable-next-line: assign-type-mismatch
-    local cdropdown = self:GetParent() ---@type LibDropDownExtensionCustomDropDown
+    local cdropdown = self:GetParent() ---@type LibDropDownExtensionCustomDropDown|LibDropDownExtensionDropDownList
     ---@type DropDownListPolyfill
     local parent = cdropdown:GetParent() ---@diagnostic disable-line: assign-type-mismatch
     if parent.hideBackdrops then
@@ -920,17 +935,17 @@ function CustomDropDownToggleMenu(self, level)
         cdropdownList.Backdrop:Show()
         cdropdownList.MenuBackdrop:Hide()
     end
+    cdropdownList.parent = parent
     local width = 20
     local height = 20
     for index, menuListOption in ipairs(menuList) do
         local button = cdropdownList.buttons[index]
         if not button then
-            button = NewCustomDropDownButton(cdropdownList, button)
+            button = NewCustomDropDownButton(cdropdownList)
             cdropdownList.buttons[index] = button
         end
-        local prevButton = cdropdownList.buttons[index - 1]
-        if prevButton then
-            button:SetPoint("TOPLEFT", prevButton, "BOTTOMLEFT", 0, 0)
+        if index > 1 then
+            button:SetPoint("TOPLEFT", cdropdownList.buttons[index - 1], "BOTTOMLEFT", 0, 0)
         else
             button:SetPoint("TOPLEFT", cdropdownList, "TOPLEFT", 10, -10)
         end
@@ -1148,7 +1163,8 @@ end
 local function func2(dropdown, event, options, level, data)
     if event == "OnShow" then
         options[1] = { text = format("%s showns on level %d (random %d)", data.test2, level, random(1, 100)) }
-        options[2] = { text = "Additional options", hasArrow = true, menuList = { { text = "Sub option 1" }, { text = "Sub option 2" }, { text = "Sub option 3" } } }
+        local function func(button) print(button.option.text) end
+        options[2] = { text = "Additional options", hasArrow = true, menuList = { { text = "Sub option 1", func = func }, { text = "Sub option 2", func = func }, { text = "Sub option 3", keepShownOnClick = true, func = func } } }
         if level == 1 then
             if dropdown.which == "SELF" then
                 options[3] = { text = "It's you!", colorCode = "|cff55FFFF", keepShownOnClick = true }
