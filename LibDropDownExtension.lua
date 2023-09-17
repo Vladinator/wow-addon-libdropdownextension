@@ -1180,7 +1180,7 @@ function Lib:UnregisterEvent(events, func, levels)
     return true
 end
 
--- [=[
+--[=[
 
 print(..., MAJOR, LibPrevMinor, "->", MINOR)
 
